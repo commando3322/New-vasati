@@ -1,10 +1,5 @@
-// DOM Content Loaded Event
+// Initialize all functionality when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
-  initializeApp()
-})
-
-// Initialize Application
-function initializeApp() {
   initializeNavigation()
   initializeGallery()
   initializeContactForm()
@@ -12,9 +7,9 @@ function initializeApp() {
   initializeAnimations()
   initializeCounters()
   initializeLazyLoading()
-}
+})
 
-// Navigation System
+// Navigation functionality
 function initializeNavigation() {
   const hamburger = document.getElementById("hamburger")
   const navMenu = document.getElementById("nav-menu")
@@ -22,14 +17,14 @@ function initializeNavigation() {
   const footerLinks = document.querySelectorAll(".footer-link")
   const pages = document.querySelectorAll(".page")
 
-  // Mobile menu toggle
+  // Hamburger menu toggle
   if (hamburger && navMenu) {
     hamburger.addEventListener("click", () => {
       hamburger.classList.toggle("active")
       navMenu.classList.toggle("active")
     })
 
-    // Close mobile menu when clicking outside
+    // Close menu when clicking outside
     document.addEventListener("click", (event) => {
       const isClickInsideNav = navMenu.contains(event.target)
       const isClickOnHamburger = hamburger.contains(event.target)
@@ -41,7 +36,7 @@ function initializeNavigation() {
     })
   }
 
-  // Page navigation function
+  // Page navigation
   function showPage(pageId) {
     // Hide all pages
     pages.forEach((page) => {
@@ -70,7 +65,7 @@ function initializeNavigation() {
       navMenu.classList.remove("active")
     }
 
-    // Smooth scroll to top
+    // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" })
 
     // Trigger animations for the new page
@@ -79,7 +74,7 @@ function initializeNavigation() {
       if (pageId === "home") {
         animateCounters()
       }
-    }, 100)
+    }, 50)
   }
   // Add click listeners to navigation links
   ;[...navLinks, ...footerLinks].forEach((link) => {
@@ -92,7 +87,7 @@ function initializeNavigation() {
     })
   })
 
-  // Add click listeners to CTA buttons
+  // Add click listeners to buttons with data-page attribute
   document.querySelectorAll("[data-page]").forEach((button) => {
     if (!button.classList.contains("nav-link") && !button.classList.contains("footer-link")) {
       button.addEventListener("click", function (e) {
@@ -106,7 +101,7 @@ function initializeNavigation() {
   })
 }
 
-// Gallery Functionality
+// Gallery functionality - FIXED
 function initializeGallery() {
   const gallerySlider = document.getElementById("gallerySlider")
   const prevBtn = document.getElementById("prevBtn")
@@ -119,8 +114,28 @@ function initializeGallery() {
   let currentSlide = 0
   let isTransitioning = false
 
+  console.log(`Found ${galleryItems.length} gallery items`) // Debug log
+
+  // Test all image sources
+  galleryItems.forEach((item, index) => {
+    const img = item.querySelector("img")
+    if (img) {
+      img.addEventListener("error", function () {
+        console.error(`Failed to load image ${index + 1}:`, this.src)
+        // Set a fallback image with different colors for each
+        const colors = ["059669", "2563eb", "7c3aed"]
+        this.src = `https://via.placeholder.com/800x400/${colors[index]}/ffffff?text=Gallery+Image+${index + 1}`
+      })
+
+      img.addEventListener("load", function () {
+        console.log(`Successfully loaded image ${index + 1}:`, this.src)
+      })
+    }
+  })
+
   // Create dots
   if (dotsContainer) {
+    dotsContainer.innerHTML = "" // Clear existing dots
     galleryItems.forEach((_, index) => {
       const dot = document.createElement("div")
       dot.classList.add("dot")
@@ -131,11 +146,15 @@ function initializeGallery() {
   }
 
   function updateSlider() {
-    if (isTransitioning) return
+    if (isTransitioning || galleryItems.length === 0) return
 
     isTransitioning = true
-    const translateX = -currentSlide * 100
+
+    // Calculate the transform value - each slide is 33.333% width
+    const translateX = -currentSlide * 33.333
     gallerySlider.style.transform = `translateX(${translateX}%)`
+
+    console.log(`Moving to slide ${currentSlide}, translateX: ${translateX}%`) // Debug log
 
     // Update dots
     const dots = dotsContainer?.querySelectorAll(".dot")
@@ -151,7 +170,7 @@ function initializeGallery() {
   }
 
   function goToSlide(slideIndex) {
-    if (slideIndex >= 0 && slideIndex < galleryItems.length) {
+    if (slideIndex >= 0 && slideIndex < galleryItems.length && slideIndex !== currentSlide) {
       currentSlide = slideIndex
       updateSlider()
     }
@@ -167,33 +186,45 @@ function initializeGallery() {
     updateSlider()
   }
 
-  // Event listeners
-  if (nextBtn) nextBtn.addEventListener("click", nextSlide)
-  if (prevBtn) prevBtn.addEventListener("click", prevSlide)
+  // Button event listeners
+  if (nextBtn) {
+    nextBtn.addEventListener("click", (e) => {
+      e.preventDefault()
+      nextSlide()
+    })
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", (e) => {
+      e.preventDefault()
+      prevSlide()
+    })
+  }
 
   // Auto-play functionality
-  let autoPlayInterval = setInterval(nextSlide, 5000)
+  let autoPlayInterval = setInterval(nextSlide, 4000)
 
-  // Pause auto-play on hover
   gallerySlider.addEventListener("mouseenter", () => {
     clearInterval(autoPlayInterval)
   })
 
   gallerySlider.addEventListener("mouseleave", () => {
-    autoPlayInterval = setInterval(nextSlide, 5000)
+    autoPlayInterval = setInterval(nextSlide, 4000)
   })
 
-  // Touch/swipe support
+  // Touch/swipe functionality
   let startX = 0
   let endX = 0
 
   gallerySlider.addEventListener("touchstart", (e) => {
     startX = e.touches[0].clientX
+    clearInterval(autoPlayInterval)
   })
 
   gallerySlider.addEventListener("touchend", (e) => {
     endX = e.changedTouches[0].clientX
     handleSwipe()
+    autoPlayInterval = setInterval(nextSlide, 4000)
   })
 
   function handleSwipe() {
@@ -211,14 +242,23 @@ function initializeGallery() {
 
   // Keyboard navigation
   document.addEventListener("keydown", (e) => {
-    if (document.getElementById("gallery").classList.contains("active")) {
-      if (e.key === "ArrowLeft") prevSlide()
-      if (e.key === "ArrowRight") nextSlide()
+    if (document.getElementById("gallery")?.classList.contains("active")) {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault()
+        prevSlide()
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault()
+        nextSlide()
+      }
     }
   })
+
+  // Initialize first slide
+  updateSlider()
 }
 
-// Contact Form
+// Contact form functionality
 function initializeContactForm() {
   const contactForm = document.getElementById("contactForm")
 
@@ -230,12 +270,10 @@ function initializeContactForm() {
     const formData = new FormData(contactForm)
     const data = Object.fromEntries(formData)
 
-    // Validation
     if (!validateForm(data)) {
       return
     }
 
-    // Submit form
     submitForm(data)
   })
 
@@ -243,7 +281,6 @@ function initializeContactForm() {
     const requiredFields = ["firstName", "lastName", "email", "subject", "message"]
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-    // Check required fields
     for (const field of requiredFields) {
       if (!data[field] || data[field].trim() === "") {
         showNotification(`Please fill in the ${field.replace(/([A-Z])/g, " $1").toLowerCase()} field.`, "error")
@@ -251,13 +288,11 @@ function initializeContactForm() {
       }
     }
 
-    // Validate email
     if (!emailRegex.test(data.email)) {
       showNotification("Please enter a valid email address.", "error")
       return false
     }
 
-    // Validate phone if provided
     if (data.phone && data.phone.trim() !== "") {
       const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
       if (!phoneRegex.test(data.phone.replace(/\s/g, ""))) {
@@ -271,36 +306,40 @@ function initializeContactForm() {
 
   function submitForm(data) {
     const submitButton = contactForm.querySelector('button[type="submit"]')
-    const originalText = submitButton.textContent
+    const originalText = submitButton?.textContent
 
-    // Show loading state
-    submitButton.textContent = "Sending..."
-    submitButton.disabled = true
-    submitButton.classList.add("loading")
+    if (submitButton) {
+      submitButton.textContent = "Sending..."
+      submitButton.disabled = true
+      submitButton.classList.add("loading")
+    }
 
     // Simulate form submission
     setTimeout(() => {
       showNotification("Thank you for your message! We will get back to you soon.", "success")
       contactForm.reset()
 
-      // Reset button
-      submitButton.textContent = originalText
-      submitButton.disabled = false
-      submitButton.classList.remove("loading")
+      if (submitButton && originalText) {
+        submitButton.textContent = originalText
+        submitButton.disabled = false
+        submitButton.classList.remove("loading")
+      }
     }, 2000)
   }
 }
 
-// Scroll Effects
+// Scroll effects
 function initializeScrollEffects() {
   const scrollToTopBtn = document.getElementById("scrollToTop")
 
   // Show/hide scroll to top button
   window.addEventListener("scroll", () => {
-    if (window.pageYOffset > 300) {
-      scrollToTopBtn.style.display = "block"
-    } else {
-      scrollToTopBtn.style.display = "none"
+    if (scrollToTopBtn) {
+      if (window.pageYOffset > 300) {
+        scrollToTopBtn.style.display = "block"
+      } else {
+        scrollToTopBtn.style.display = "none"
+      }
     }
   })
 
@@ -314,7 +353,7 @@ function initializeScrollEffects() {
     })
   }
 
-  // Parallax effect for hero section
+  // Parallax effect for hero banner
   window.addEventListener("scroll", () => {
     const scrolled = window.pageYOffset
     const heroSection = document.querySelector(".hero-banner")
@@ -326,7 +365,7 @@ function initializeScrollEffects() {
   })
 }
 
-// Animation System
+// Animation functionality
 function initializeAnimations() {
   const observerOptions = {
     threshold: 0.1,
@@ -346,7 +385,7 @@ function initializeAnimations() {
 
   animatedElements.forEach((element, index) => {
     element.classList.add("fade-in")
-    element.style.transitionDelay = `${index * 0.1}s`
+    element.style.transitionDelay = `${index * 0.05}s`
     observer.observe(element)
   })
 }
@@ -359,11 +398,11 @@ function triggerAnimations() {
   elements.forEach((element, index) => {
     setTimeout(() => {
       element.classList.add("visible")
-    }, index * 100)
+    }, index * 50)
   })
 }
 
-// Counter Animation
+// Counter animation functionality
 function initializeCounters() {
   const counters = document.querySelectorAll(".stat-number")
 
@@ -372,7 +411,7 @@ function initializeCounters() {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const element = entry.target
-          const target = Number.parseInt(element.getAttribute("data-target"))
+          const target = Number.parseInt(element.getAttribute("data-target") || "0")
 
           if (target && !element.dataset.animated) {
             element.dataset.animated = "true"
@@ -392,7 +431,7 @@ function initializeCounters() {
 function animateCounters() {
   const counters = document.querySelectorAll(".stat-number")
   counters.forEach((counter) => {
-    const target = Number.parseInt(counter.getAttribute("data-target"))
+    const target = Number.parseInt(counter.getAttribute("data-target") || "0")
     if (target && !counter.dataset.animated) {
       counter.dataset.animated = "true"
       animateCounter(counter, target)
@@ -400,7 +439,7 @@ function animateCounters() {
   })
 }
 
-function animateCounter(element, target, duration = 2000) {
+function animateCounter(element, target, duration = 1000) {
   let start = 0
   const increment = target / (duration / 16)
 
@@ -419,7 +458,7 @@ function formatNumber(num) {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 }
 
-// Lazy Loading
+// Lazy loading functionality
 function initializeLazyLoading() {
   const images = document.querySelectorAll('img[loading="lazy"]')
 
@@ -441,14 +480,12 @@ function initializeLazyLoading() {
   }
 }
 
-// Utility Functions
+// Notification system
 function showNotification(message, type = "info") {
-  // Create notification element
   const notification = document.createElement("div")
   notification.className = `notification notification-${type}`
   notification.textContent = message
 
-  // Style the notification
   Object.assign(notification.style, {
     position: "fixed",
     top: "20px",
@@ -464,7 +501,6 @@ function showNotification(message, type = "info") {
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
   })
 
-  // Set background color based on type
   const colors = {
     success: "#059669",
     error: "#dc2626",
@@ -473,15 +509,12 @@ function showNotification(message, type = "info") {
   }
   notification.style.backgroundColor = colors[type] || colors.info
 
-  // Add to DOM
   document.body.appendChild(notification)
 
-  // Animate in
   setTimeout(() => {
     notification.style.transform = "translateX(0)"
   }, 100)
 
-  // Remove after delay
   setTimeout(() => {
     notification.style.transform = "translateX(100%)"
     setTimeout(() => {
@@ -492,6 +525,7 @@ function showNotification(message, type = "info") {
   }, 4000)
 }
 
+// Utility functions
 function debounce(func, wait) {
   let timeout
   return function executedFunction(...args) {
@@ -504,52 +538,26 @@ function debounce(func, wait) {
   }
 }
 
-function throttle(func, limit) {
-  let inThrottle
-  return function () {
-    const args = arguments
-    
-    if (!inThrottle) {
-      func.apply(this, args)
-      inThrottle = true
-      setTimeout(() => (inThrottle = false), limit)
-    }
-  }
-}
-
-// Performance optimizations
-const debouncedResize = debounce(() => {
-  // Handle resize events
-  triggerAnimations()
-}, 250)
-
-const throttledScroll = throttle(() => {
-  // Handle scroll events efficiently
+// Performance optimization
+const debouncedScrollHandler = debounce(() => {
+  // Handle scroll events here if needed
 }, 16)
 
-window.addEventListener("resize", debouncedResize)
-window.addEventListener("scroll", throttledScroll)
+window.addEventListener("scroll", debouncedScrollHandler)
 
 // Error handling
 window.addEventListener("error", (e) => {
   console.error("JavaScript error:", e.error)
-  showNotification("An error occurred. Please refresh the page.", "error")
 })
 
-// Service Worker registration (for future PWA capabilities)
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    // Service worker can be registered here for offline capabilities
-  })
-}
-
-// Export functions for testing (if needed)
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = {
-    formatNumber,
-    animateCounter,
-    showNotification,
-    debounce,
-    throttle,
+// Accessibility improvements
+document.addEventListener("keydown", (e) => {
+  // Handle keyboard navigation
+  if (e.key === "Tab") {
+    document.body.classList.add("keyboard-navigation")
   }
-}
+})
+
+document.addEventListener("mousedown", () => {
+  document.body.classList.remove("keyboard-navigation")
+})
